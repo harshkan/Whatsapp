@@ -44,6 +44,22 @@ class ChatSocketServer {
         });
     }
 
+    typingTrigger(data) {
+        this.socket.emit('typing', data);
+    }
+
+    typingreceive() {
+
+        this.socket.on('display', (data) => {
+            this.eventEmitter.emit('display', data);
+            /*if (data.typing === true && fromuserid === data.fromuserid && touserid === data.touserid)
+                return 'is typing ...';
+            else
+                return '';
+                */
+        });
+    }
+
 }
 
 export default new ChatSocketServer()

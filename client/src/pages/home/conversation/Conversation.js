@@ -5,6 +5,7 @@ import ChatSocketServer from '../../../utils/ChatSocketServer';
 
 import './Conversation.css';
 
+var timeout = undefined;
 class Conversation extends Component {
 
     constructor(props) {
@@ -12,12 +13,15 @@ class Conversation extends Component {
         this.state = {
             messageLoading: true,
             conversations: [],
-            selectedUser: null
+            selectedUser: null,
+            isTyping: false
         }
         this.messageContainer = React.createRef();
     }
 
     componentDidMount() {
+        ChatSocketServer.typingreceive();
+        ChatSocketServer.eventEmitter.on('display', this.receivetyping);
         ChatSocketServer.receiveMessage();
         ChatSocketServer.eventEmitter.on('add-message-response', this.receiveSocketMessages);
     }
@@ -51,6 +55,29 @@ class Conversation extends Component {
         }
     }
 
+    receivetyping = (socketResponse) => {
+        try {
+            const { userId, newSelectedUser } = this.props;
+            if (socketResponse.typing === true && newSelectedUser.id === socketResponse.fromuserid && userId === socketResponse.touserid) {
+                this.setState({
+                    isTyping: true
+                });
+
+            }
+            else {
+                this.setState({
+                    isTyping: false
+                });
+            }
+        }
+        catch (error) {
+            this.setState({
+                isTyping: false
+            });
+        }
+
+    }
+
     getMessages = async () => {
         try {
             const { userId, newSelectedUser } = this.props;
@@ -77,6 +104,8 @@ class Conversation extends Component {
         if (event.key === 'Enter') {
             const message = event.target.value;
             const { userId, newSelectedUser } = this.props;
+            clearTimeout(timeout);
+            ChatSocketServer.typingTrigger({ fromuserid: userId, typing: false, touserid: newSelectedUser.id });
             if (message === '' || message === undefined || message === null) {
                 alert(`Message can't be empty.`);
             } else if (userId === '') {
@@ -92,7 +121,17 @@ class Conversation extends Component {
                 event.target.value = '';
             }
         }
+        else {
+            const { userId, newSelectedUser } = this.props;
+            ChatSocketServer.typingTrigger({ fromuserid: userId, typing: true, touserid: newSelectedUser.id });
+            clearTimeout(timeout);
+            timeout = setTimeout(15000);
+            ChatSocketServer.typingTrigger({ fromuserid: userId, typing: false, touserid: newSelectedUser.id });
+
+        }
     }
+
+
 
     sendAndUpdateMessages(message) {
         try {
@@ -105,6 +144,8 @@ class Conversation extends Component {
             alert(`Can't send your message`);
         }
     }
+
+
 
     scrollMessageContainer() {
         if (this.messageContainer.current !== null) {
@@ -149,7 +190,7 @@ class Conversation extends Component {
     }
 
     render() {
-        const { messageLoading, selectedUser } = this.state;
+        const { messageLoading, selectedUser, isTyping } = this.state;
         return (
             <>
                 <div className={`message-overlay ${!messageLoading ? 'visibility-hidden' : ''}`}>
@@ -160,6 +201,9 @@ class Conversation extends Component {
                         <div className="opposite-user">
                             Chatting with {this.props.newSelectedUser !== null ? this.props.newSelectedUser.username : '----'}
                         </div>
+                        <br></br>
+                        {isTyping === true ? 'Typing ....' : ''}
+                        <br></br>
                         {this.state.conversations.length > 0 ? this.getMessageUI() : this.getInitiateConversationUI()}
                     </div>
 

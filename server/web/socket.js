@@ -47,6 +47,16 @@ class Socket {
                 }
             });
 
+
+            socket.on(`typing`, (data) => {
+                console.log(data);
+
+                if (data.typing === true)
+                    socket.broadcast.emit('display', data)
+                else
+                    socket.broadcast.emit('display', data)
+
+            });
 			/**
 			* send the messages to the user
 			*/
@@ -130,6 +140,7 @@ class Socket {
         });
 
     }
+
 
     socketConfig() {
         this.io.use(async (socket, next) => {
